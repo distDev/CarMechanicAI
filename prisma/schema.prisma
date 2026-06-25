@@ -70,21 +70,116 @@ enum ChatRole {
   SYSTEM
 }
 
+enum AuthProvider {
+  GOOGLE
+  APPLE
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+}
+
 //
 // USERS
 //
 
 model User {
-  id    String @id @default(uuid()) @db.Uuid
-  email String @unique @db.VarChar(255)
+  id String @id @default(uuid()) @db.Uuid
+
+  email String? @unique @db.VarChar(255)
+
+  isAnonymous Boolean @default(true) @map("is_anonymous")
+
+  googleId String? @unique @map("google_id")
+
+  name String? @db.VarChar(255)
+
+  avatarUrl String? @map("avatar_url")
+
+  subscriptionTier SubscriptionTier @default(FREE) @map("subscription_tier")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  vehicles      Vehicle[]
+  vehicles Vehicle[]
+
   conversations ChatConversation[]
 
+  deviceSessions DeviceSession[]
+
+  subscriptions Subscription[]
+
+  aiUsages AiUsage[]
+
+  @@index([isAnonymous])
+  @@index([subscriptionTier])
   @@map("users")
+}
+
+//
+// DEVICE SECCIONS
+//
+
+model DeviceSession {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+
+  deviceId String @map("device_id") @db.VarChar(255)
+
+  platform String? @db.VarChar(50)
+
+  refreshTokenHash String @map("refresh_token_hash")
+
+  userAgent String? @map("user_agent")
+
+  ipAddress String? @map("ip_address")
+
+  expiresAt DateTime @map("expires_at")
+
+  lastActiveAt DateTime @default(now()) @map("last_active_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([expiresAt])
+  @@map("device_sessions")
+}
+
+//
+// SUBSCRIPTIONS
+//
+
+model Subscription {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+
+  provider String @db.VarChar(50)
+
+  providerSubscriptionId String @map("provider_subscription_id")
+
+  tier SubscriptionTier
+
+  isActive Boolean @default(true) @map("is_active")
+
+  startedAt DateTime @map("started_at")
+
+  expiresAt DateTime? @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubscriptionId])
+  @@index([userId])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("subscriptions")
 }
 
 //
@@ -360,4 +455,30 @@ model ChatMessage {
 
   @@index([conversationId])
   @@map("chat_messages")
+}
+
+//
+// AI USAGE 
+//
+
+model AiUsage {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+
+  operationType String @map("operation_type")
+
+  model String
+
+  tokens Int
+
+  estimatedCost Float? @map("estimated_cost")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_usages")
 }
