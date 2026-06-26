@@ -11,6 +11,7 @@ import redisConfig from '@config/redis.config';
 import { PrismaModule } from '@/infrastructure/prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './modules/auth/auth.module';
+import { VehiclesModule } from './modules/vehicles/vehicles.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AuthModule } from './modules/auth/auth.module';
 
     PrismaModule,
     AuthModule,
+    VehiclesModule,
   ],
   controllers: [AppController],
 })
