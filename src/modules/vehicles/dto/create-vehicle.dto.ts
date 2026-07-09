@@ -16,13 +16,13 @@ export class CreateVehicleDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  brand: string;
+  brand!: string;
 
   @ApiProperty({ example: 'Corolla', maxLength: 100 })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  model: string;
+  model!: string;
 
   @ApiPropertyOptional({ example: '1.8L', maxLength: 120 })
   @IsOptional()

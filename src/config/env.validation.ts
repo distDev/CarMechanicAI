@@ -1,3 +1,4 @@
+import { StorageDriver } from '@/modules/file-upload/enums/storage-driver.enum';
 import * as Joi from 'joi';
 
 export const envValidationSchema = Joi.object({
@@ -26,4 +27,48 @@ export const envValidationSchema = Joi.object({
   JWT_REFRESH_EXPIRES_IN: Joi.string().required(),
 
   GOOGLE_CLIENT_ID: Joi.string().required(),
+
+  FILE_STORAGE_DRIVER: Joi.string()
+    .valid(...Object.values(StorageDriver))
+    .default(StorageDriver.LOCAL),
+
+  UPLOAD_DIR: Joi.string().when('FILE_STORAGE_DRIVER', {
+    is: StorageDriver.LOCAL,
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
+  FILE_PUBLIC_URL: Joi.string().uri().required(),
+
+  MINIO_ENDPOINT: Joi.string().when('FILE_STORAGE_DRIVER', {
+    is: StorageDriver.MINIO,
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
+  MINIO_PORT: Joi.number().port().when('FILE_STORAGE_DRIVER', {
+    is: StorageDriver.MINIO,
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
+  MINIO_USE_SSL: Joi.boolean().default(false),
+
+  MINIO_ACCESS_KEY: Joi.string().when('FILE_STORAGE_DRIVER', {
+    is: StorageDriver.MINIO,
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
+  MINIO_SECRET_KEY: Joi.string().when('FILE_STORAGE_DRIVER', {
+    is: StorageDriver.MINIO,
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
+  MINIO_BUCKET: Joi.string().when('FILE_STORAGE_DRIVER', {
+    is: StorageDriver.MINIO,
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
 });
