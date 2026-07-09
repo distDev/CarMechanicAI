@@ -12,6 +12,9 @@ import { PrismaModule } from '@/infrastructure/prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
+import { FileUploadModule } from './modules/file-upload/file-upload.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -49,9 +52,15 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
       }),
     }),
 
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
+
     PrismaModule,
     AuthModule,
     VehiclesModule,
+    FileUploadModule,
   ],
   controllers: [AppController],
 })

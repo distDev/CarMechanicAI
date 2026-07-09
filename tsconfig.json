@@ -20,10 +20,8 @@
     },
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": true,
-    "strictBindCallApply": true,
+    "strict": true,
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src", "test", "prisma"]
