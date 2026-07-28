@@ -42,4 +42,8 @@ export class FileUploadService {
   async delete(path: string): Promise<void> {
     await this.storageProvider.delete(path);
   }
+
+  async deleteMany(paths: string[]): Promise<void> {
+    await Promise.all(paths.map((path) => this.delete(path)));
+  }
 }

@@ -20,8 +20,8 @@ import {
 
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 
-import { multerOptions } from '../config/multer.config';
-import { MAX_FILES } from '../constants/file-upload.constants';
+import { multerOptions } from '@modules/file-upload/config/multer.config';
+
 import { FileMetadataResponseDto } from '../dto/file-metadata-response.dto';
 import { UploadFilesDto } from '../dto/upload-files.dto';
 import { FileMetadata } from '../interfaces/file-metadata.interface';
@@ -55,7 +55,9 @@ export class FileUploadController {
   })
   @ApiOkResponse({ type: FileMetadataResponseDto, isArray: true })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
-  @UseInterceptors(FilesInterceptor('files', MAX_FILES, multerOptions))
+  @UseInterceptors(
+    FilesInterceptor('files', multerOptions.limits!.files, multerOptions),
+  )
   async upload(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: UploadFilesDto,

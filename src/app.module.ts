@@ -10,9 +10,10 @@ import { envValidationSchema } from '@config/env.validation';
 import redisConfig from '@config/redis.config';
 import { PrismaModule } from '@/infrastructure/prisma/prisma.module';
 import { AppController } from './app.controller';
-import { AuthModule } from './modules/auth/auth.module';
-import { VehiclesModule } from './modules/vehicles/vehicles.module';
-import { FileUploadModule } from './modules/file-upload/file-upload.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { VehiclesModule } from '@/modules/vehicles/vehicles.module';
+import { FileUploadModule } from '@/modules/file-upload/file-upload.module';
+import { ProblemsModule } from '@/modules/problems/problems.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -61,6 +62,7 @@ import { join } from 'path';
     AuthModule,
     VehiclesModule,
     FileUploadModule,
+    ProblemsModule,
   ],
   controllers: [AppController],
 })
