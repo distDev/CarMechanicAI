@@ -215,7 +215,7 @@ model Vehicle {
 }
 
 //
-// PROBLEMS
+// PROBLEM
 //
 
 model Problem {
@@ -236,6 +236,8 @@ model Problem {
 
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
+  photos ProblemPhoto[]
+
   causes Cause[]
 
   confirmedCause Cause? @relation("ProblemConfirmedCause", fields: [confirmedCauseId], references: [id], onDelete: SetNull)
@@ -247,6 +249,25 @@ model Problem {
   @@index([confirmedCauseId])
   @@index([status])
   @@map("problems")
+}
+
+//
+// PROBLEM PHOTO 
+//
+
+model ProblemPhoto {
+  id String @id @default(uuid()) @db.Uuid
+
+  problemId String @map("problem_id") @db.Uuid
+
+  path String @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@map("problem_photos")
 }
 
 //
