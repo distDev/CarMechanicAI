@@ -6,11 +6,13 @@ import { redisStore } from 'cache-manager-redis-yet';
 import appConfig from '@config/app.config';
 import databaseConfig from '@config/database.config';
 import authConfig from '@config/auth.config';
+import aiConfig from '@/infrastructure/ai/config/ai.config';
 import { envValidationSchema } from '@config/env.validation';
 import redisConfig from '@config/redis.config';
 import { PrismaModule } from '@/infrastructure/prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AuthModule } from '@/modules/auth/auth.module';
+import { AiModule } from '@/infrastructure/ai/ai.module';
 import { VehiclesModule } from '@/modules/vehicles/vehicles.module';
 import { FileUploadModule } from '@/modules/file-upload/file-upload.module';
 import { ProblemsModule } from '@/modules/problems/problems.module';
@@ -23,7 +25,7 @@ import { join } from 'path';
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV ?? 'development'}`, '.env'],
       validationSchema: envValidationSchema,
-      load: [appConfig, databaseConfig, redisConfig, authConfig],
+      load: [appConfig, databaseConfig, redisConfig, authConfig, aiConfig],
     }),
 
     LoggerModule.forRootAsync({
@@ -63,6 +65,7 @@ import { join } from 'path';
     VehiclesModule,
     FileUploadModule,
     ProblemsModule,
+    AiModule,
   ],
   controllers: [AppController],
 })

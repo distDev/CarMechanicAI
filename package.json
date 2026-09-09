@@ -25,6 +25,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
@@ -35,6 +36,7 @@
     "@nestjs/serve-static": "^5.0.5",
     "@nestjs/swagger": "^11.3.2",
     "@prisma/client": "^6.19.3",
+    "axios": "^1.19.0",
     "bcrypt": "^6.0.0",
     "cache-manager": "^7.2.8",
     "cache-manager-redis-yet": "^5.1.5",
