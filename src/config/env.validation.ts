@@ -71,4 +71,26 @@ export const envValidationSchema = Joi.object({
     then: Joi.required(),
     otherwise: Joi.optional(),
   }),
+
+  AI_PROVIDER: Joi.string().required(),
+
+  AI_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1_000).default(120_000),
+
+  OPENROUTER_API_KEY: Joi.string().allow('').optional(),
+
+  OPENROUTER_MODEL: Joi.string().optional(),
+
+  OLLAMA_URL: Joi.string()
+    .uri()
+    .when('AI_PROVIDER', {
+      is: Joi.string().pattern(/\bollama\b/),
+      then: Joi.required(),
+      otherwise: Joi.optional(),
+    }),
+
+  OLLAMA_MODEL: Joi.string().when('AI_PROVIDER', {
+    is: Joi.string().pattern(/\bollama\b/),
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
 });
