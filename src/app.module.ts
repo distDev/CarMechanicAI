@@ -1,4 +1,5 @@
 import { CacheModule } from '@nestjs/cache-manager';
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
@@ -17,7 +18,6 @@ import { VehiclesModule } from '@/modules/vehicles/vehicles.module';
 import { FileUploadModule } from '@/modules/file-upload/file-upload.module';
 import { ProblemsModule } from '@/modules/problems/problems.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 
 @Module({
   imports: [
