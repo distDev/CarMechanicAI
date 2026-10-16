@@ -95,7 +95,6 @@ export class ProblemService {
         id: true,
         aiSummary: true,
         status: true,
-        confirmedCauseId: true,
         updatedAt: true,
       },
     });
@@ -104,7 +103,6 @@ export class ProblemService {
       id: problem.id,
       title: problem.aiSummary,
       status: problem.status,
-      confirmedCauseId: problem.confirmedCauseId,
       updatedAt: problem.updatedAt,
     }));
   }

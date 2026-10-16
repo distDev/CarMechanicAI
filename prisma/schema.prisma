@@ -61,6 +61,9 @@ enum EntityType {
   DIAGNOSIS_SESSION
   REPAIR_SESSION
   VEHICLE
+  DIAGNOSIS_STEP
+
+  // Оставляем временно для совместимости со старой схемой.
   CAUSE
 }
 
@@ -78,6 +81,33 @@ enum AuthProvider {
 enum SubscriptionTier {
   FREE
   PREMIUM
+}
+
+enum DiagnosisAttemptStatus {
+  IN_PROGRESS
+  CONFIRMED
+  RULED_OUT
+  INCONCLUSIVE
+  FAILED
+  CANCELED
+}
+
+enum DiagnosisStepResponseType {
+  CHOICE
+  NUMBER
+  TEXT
+}
+
+enum DiagnosisStepResult {
+  FOUND
+  NOT_FOUND
+  UNCERTAIN
+  SKIPPED
+}
+
+enum DiagnosisStepSkipReason {
+  NO_TOOL
+  USER_SKIPPED
 }
 
 //
@@ -227,8 +257,6 @@ model Problem {
 
   aiSummary String? @map("ai_summary") @db.Text
 
-  confirmedCauseId String? @map("confirmed_cause_id") @db.Uuid
-
   status ProblemStatus @default(NEW)
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -238,15 +266,10 @@ model Problem {
 
   photos ProblemPhoto[]
 
-  causes Cause[]
-
-  confirmedCause Cause? @relation("ProblemConfirmedCause", fields: [confirmedCauseId], references: [id], onDelete: SetNull)
-
   diagnosisSessions DiagnosisSession[]
   repairSessions    RepairSession[]
 
   @@index([vehicleId])
-  @@index([confirmedCauseId])
   @@index([status])
   @@map("problems")
 }
@@ -280,18 +303,34 @@ model DiagnosisSession {
 
   status DiagnosisSessionStatus @default(PENDING)
 
-  rawAiResponse Json? @map("raw_ai_response")
-  repairPreview Json? @map("repair_preview")
+  summary          String? @db.Text
+  estimatedMinutes Int?    @map("estimated_minutes")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  rawAiResponse   Json? @map("raw_ai_response")
+  repairPreview   Json? @map("repair_preview")
+  contextSnapshot Json? @map("context_snapshot")
 
+  previousSessionId String? @map("previous_session_id") @db.Uuid
+
+  aiProvider    String? @map("ai_provider") @db.VarChar(50)
+  aiModel       String? @map("ai_model") @db.VarChar(100)
+  promptVersion String? @map("prompt_version") @db.VarChar(50)
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   completedAt DateTime? @map("completed_at")
 
   problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
 
-  @@index([problemId])
+  previousSession DiagnosisSession? @relation("DiagnosisSessionHistory", fields: [previousSessionId], references: [id], onDelete: SetNull)
+
+  nextSessions DiagnosisSession[] @relation("DiagnosisSessionHistory")
+
+  causes DiagnosisCause[]
+
+  @@index([problemId, createdAt])
   @@index([status])
+  @@index([previousSessionId])
   @@map("diagnosis_sessions")
 }
 
@@ -299,30 +338,98 @@ model DiagnosisSession {
 // CAUSES
 //
 
-model Cause {
+model DiagnosisCause {
   id        String @id @default(uuid()) @db.Uuid
-  problemId String @map("problem_id") @db.Uuid
+  sessionId String @map("session_id") @db.Uuid
 
   name        String  @db.VarChar(255)
   description String? @db.Text
 
-  probability Float?
+  probability      Float?
+  estimatedMinutes Int?   @map("estimated_minutes")
 
-  aiHint String? @map("ai_hint") @db.Text
-
-  isUserCreated Boolean @default(false) @map("is_user_created")
+  sortOrder Int @map("sort_order")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  session DiagnosisSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  confirmedInProblems Problem[] @relation("ProblemConfirmedCause")
+  attempts DiagnosisAttempt[]
 
-  repairSessions RepairSession[]
+  @@unique([sessionId, sortOrder])
+  @@map("diagnosis_causes")
+}
 
-  @@index([problemId])
-  @@map("causes")
+// 
+// DiagnosisAttempt
+//
+model DiagnosisAttempt {
+  id      String @id @default(uuid()) @db.Uuid
+  causeId String @map("cause_id") @db.Uuid
+
+  status DiagnosisAttemptStatus @default(IN_PROGRESS)
+
+  resultSummary String? @map("result_summary") @db.Text
+
+  rawAiResponse Json? @map("raw_ai_response")
+
+  aiProvider    String? @map("ai_provider") @db.VarChar(50)
+  aiModel       String? @map("ai_model") @db.VarChar(100)
+  promptVersion String? @map("prompt_version") @db.VarChar(50)
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  completedAt DateTime? @map("completed_at")
+
+  cause DiagnosisCause @relation(fields: [causeId], references: [id], onDelete: Cascade)
+
+  steps DiagnosisStep[]
+
+  repairSessionCauses RepairSessionCause[]
+
+  @@index([causeId])
+  @@index([status])
+  @@map("diagnosis_attempts")
+}
+
+//
+// DiagnosisStep
+//
+
+model DiagnosisStep {
+  id        String @id @default(uuid()) @db.Uuid
+  attemptId String @map("attempt_id") @db.Uuid
+
+  position Int
+
+  title       String  @db.VarChar(255)
+  instruction String  @db.Text
+  question    String? @db.Text
+
+  responseType DiagnosisStepResponseType @map("response_type")
+
+  options     Json?
+  inputConfig Json? @map("input_config")
+
+  requiredTools String[] @default([]) @map("required_tools")
+
+  safetyNote String? @map("safety_note") @db.Text
+
+  result     DiagnosisStepResult?
+  answer     Json?
+  comment    String?                  @db.Text
+  skipReason DiagnosisStepSkipReason? @map("skip_reason")
+
+  completedAt DateTime? @map("completed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  attempt DiagnosisAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, position])
+  @@map("diagnosis_steps")
 }
 
 //
@@ -388,26 +495,41 @@ model StepResult {
 //
 
 model RepairSession {
-  id String @id @default(uuid()) @db.Uuid
-
+  id        String @id @default(uuid()) @db.Uuid
   problemId String @map("problem_id") @db.Uuid
-  causeId   String @map("cause_id") @db.Uuid
 
   status RepairSessionStatus @default(PENDING)
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   completedAt DateTime? @map("completed_at")
 
   problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
 
-  cause Cause @relation(fields: [causeId], references: [id], onDelete: Restrict)
+  causes RepairSessionCause[]
 
   @@index([problemId])
-  @@index([causeId])
   @@index([status])
   @@map("repair_sessions")
+}
+
+//
+// RepairSessionCause
+//
+
+model RepairSessionCause {
+  repairSessionId    String @map("repair_session_id") @db.Uuid
+  diagnosisAttemptId String @map("diagnosis_attempt_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  repairSession RepairSession @relation(fields: [repairSessionId], references: [id], onDelete: Cascade)
+
+  diagnosisAttempt DiagnosisAttempt @relation(fields: [diagnosisAttemptId], references: [id], onDelete: Restrict)
+
+  @@id([repairSessionId, diagnosisAttemptId])
+  @@index([diagnosisAttemptId])
+  @@map("repair_session_causes")
 }
 
 //

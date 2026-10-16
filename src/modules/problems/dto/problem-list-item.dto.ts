@@ -11,9 +11,6 @@ export class ProblemListItemDto {
   @ApiProperty({ enum: ProblemStatus })
   status!: ProblemStatus;
 
-  @ApiPropertyOptional({ format: 'uuid', nullable: true })
-  confirmedCauseId!: string | null;
-
   @ApiProperty({ type: String, format: 'date-time' })
   updatedAt!: Date;
 }
