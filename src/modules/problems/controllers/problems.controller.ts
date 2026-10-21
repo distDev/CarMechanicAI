@@ -22,6 +22,7 @@ import {
 
 import { ProblemService } from '../services/problem.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { DiagnosisService } from '@/modules/diagnosis/services/diagnosis.service';
 
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
@@ -39,7 +40,10 @@ import { multerOptions } from '@modules/file-upload/config/multer.config';
 @UseGuards(JwtAuthGuard)
 @Controller('problems')
 export class ProblemsController {
-  constructor(private readonly problemService: ProblemService) {}
+  constructor(
+    private readonly problemService: ProblemService,
+    private readonly diagnosisService: DiagnosisService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a problem' })
@@ -50,12 +54,22 @@ export class ProblemsController {
   @UseInterceptors(
     FilesInterceptor('files', multerOptions.limits!.files, multerOptions),
   )
-  create(
+  async create(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateProblemDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    return this.problemService.create(dto, files ?? [], user.id);
+    const problem = await this.problemService.create(dto, files ?? [], user.id);
+
+    const diagnosis = await this.diagnosisService.startInitial(problem.id);
+
+    return {
+      ...problem,
+      diagnosis: {
+        sessionId: diagnosis.sessionId,
+        status: diagnosis.status,
+      },
+    };
   }
 
   // TODO: Доделать, когда появится модуль диагностики и ремонта
@@ -75,5 +89,13 @@ export class ProblemsController {
     @Body() dto: UpdateProblemStatusDto,
   ) {
     return this.problemService.updateStatus(id, dto.status, user.id);
+  }
+
+  @Get(':id/diagnosis')
+  getDiagnosis(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.diagnosisService.getLatestForProblem(id, user.id);
   }
 }

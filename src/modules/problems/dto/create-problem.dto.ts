@@ -1,4 +1,10 @@
-import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  Allow,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -29,6 +35,7 @@ export class CreateProblemDto {
   @MaxLength(64)
   errorCode?: string;
 
+  @Allow()
   @ApiProperty({
     type: 'array',
     items: {

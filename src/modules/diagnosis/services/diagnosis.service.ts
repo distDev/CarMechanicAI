@@ -25,7 +25,7 @@ export class DiagnosisService {
 
   async startInitial(problemId: string): Promise<{
     sessionId: string;
-    result: InitialDiagnosisResult;
+    status: DiagnosisSessionStatus;
   }> {
     const problem = await this.prisma.problem.findUnique({
       where: {
@@ -81,10 +81,24 @@ export class DiagnosisService {
       },
     });
 
+    // Запускаем обработку, не ожидая окончания AI-запроса.
+    void this.processInitial(session.id, problem.id, context);
+
+    return {
+      sessionId: session.id,
+      status: session.status,
+    };
+  }
+
+  private async processInitial(
+    sessionId: string,
+    problemId: string,
+    context: InitialDiagnosisPromptContext,
+  ): Promise<void> {
     try {
       await this.prisma.diagnosisSession.update({
         where: {
-          id: session.id,
+          id: sessionId,
         },
         data: {
           status: DiagnosisSessionStatus.IN_PROGRESS,
@@ -102,7 +116,7 @@ export class DiagnosisService {
       await this.prisma.$transaction(async (tx) => {
         await tx.diagnosisCause.createMany({
           data: result.causes.map((cause, index) => ({
-            sessionId: session.id,
+            sessionId,
             name: cause.name,
             description: cause.description,
             probability: cause.probability,
@@ -113,7 +127,7 @@ export class DiagnosisService {
 
         await tx.diagnosisSession.update({
           where: {
-            id: session.id,
+            id: sessionId,
           },
           data: {
             status: DiagnosisSessionStatus.COMPLETED,
@@ -133,23 +147,18 @@ export class DiagnosisService {
 
         await tx.problem.update({
           where: {
-            id: problem.id,
+            id: problemId,
           },
           data: {
             aiSummary: result.summary,
           },
         });
       });
-
-      return {
-        sessionId: session.id,
-        result,
-      };
     } catch (error: unknown) {
       try {
         await this.prisma.diagnosisSession.update({
           where: {
-            id: session.id,
+            id: sessionId,
           },
           data: {
             status: DiagnosisSessionStatus.FAILED,
@@ -158,7 +167,7 @@ export class DiagnosisService {
         });
       } catch (statusError: unknown) {
         this.logger.error(
-          `Failed to mark diagnosis session ${session.id} as FAILED`,
+          `Failed to mark diagnosis session ${sessionId} as FAILED`,
           statusError instanceof Error
             ? statusError.stack
             : String(statusError),
@@ -166,11 +175,69 @@ export class DiagnosisService {
       }
 
       this.logger.error(
-        `Initial diagnosis failed for session ${session.id}`,
+        `Initial diagnosis failed for session ${sessionId}`,
         error instanceof Error ? error.stack : String(error),
       );
-
-      throw error;
     }
+  }
+
+  async getLatestForProblem(problemId: string, userId: string) {
+    const problem = await this.prisma.problem.findFirst({
+      where: {
+        id: problemId,
+        vehicle: {
+          is: {
+            userId,
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!problem) {
+      throw new NotFoundException('Problem not found');
+    }
+
+    const session = await this.prisma.diagnosisSession.findFirst({
+      where: {
+        problemId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        causes: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Diagnosis not found');
+    }
+
+    return {
+      id: session.id,
+      problemId: session.problemId,
+      status: session.status,
+      summary: session.summary,
+      estimatedMinutes: session.estimatedMinutes,
+      repairPreview: session.repairPreview,
+      previousSessionId: session.previousSessionId,
+      createdAt: session.createdAt,
+      completedAt: session.completedAt,
+      causes: session.causes.map((cause) => ({
+        id: cause.id,
+        name: cause.name,
+        description: cause.description,
+        probability: cause.probability,
+        estimatedMinutes: cause.estimatedMinutes,
+        sortOrder: cause.sortOrder,
+      })),
+    };
   }
 }
